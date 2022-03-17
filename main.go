@@ -16,4 +16,5 @@ func main() {
 	fmt.Println("main start.")
 	http.HandleFunc("/", anniversary.Handler)
 	http.ListenAndServe(":"+port, nil)
+	fmt.Println("main end.")
 }

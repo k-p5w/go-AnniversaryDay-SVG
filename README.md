@@ -10,8 +10,10 @@
 みたいなSVGイメージを作るだけのツール
 
 
-## テスト方法
+## テスト方法、使い方
 
-http://localhost:9999/api?birthday=19840807.svg
+以下、URLを開くだけ
 
+http://localhost:9999/api?birthday=19810216.svg
+http://localhost:9999/api?birthday=19720312.svg
 http://localhost:9999/api?anniversaryday=19050807.svg

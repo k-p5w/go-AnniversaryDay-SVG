@@ -7,21 +7,23 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // layoutYMD is SVGで描画する年月日
-const layoutYMD = "2006/1/2"
+const layoutYMD = "2006年1月2日"
 
 // CANVAS向け定数
 const (
 	FrameRoundness = 20
 	FrameBase      = 200
-	FontSize       = 30
+	FontSize       = 40
 	FrameTextXY    = 1300
 	canvasHeight   = FontSize * 2
-	FrameHeight    = canvasHeight / 3
-	TextBaseX      = 30
-	TextBaseY      = FontSize + 10
+	FrameHeight    = FontSize
+	TextBaseX      = FontSize
+	TextBaseY      = FontSize + (FontSize / 3)
 	FrameXY        = FontSize / 2
 )
 
@@ -35,11 +37,12 @@ type RGB struct {
 }
 
 type AgeInfo struct {
-	Age             int
-	TotalDate       int
-	BaseDate        string
-	Text            string
-	SexagenaryCycle string
+	Age                  int
+	TotalDate            int
+	BaseDate             string
+	Text                 string
+	SexagenaryCycle      string
+	SexagenaryCycleColor string
 }
 
 // Handler is /APIから呼ばれる
@@ -60,7 +63,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	svgPage := "<h1>エラーが発生しました.</h1>"
-	fmt.Println(q)
 
 	yyyymmdd := ""
 	// SVGで終わっていること
@@ -75,25 +77,27 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// canvasText := canvasBase / 2
 
 	BaseColor := "#5AA572"
-	pallet := getColorPallet(BaseColor)
 
 	ai := searchBirthDay(yyyymmdd, itemTxt)
+	BaseColor = ai.SexagenaryCycleColor
+	pallet := getColorPallet(BaseColor)
 	// フォントサイズの導出
 	nameLen := len(ai.Text)
-
+	txtLen := CountInString(ai.Text)
+	fmt.Println(nameLen)
 	// circle
-	frameWidth := (FontSize * nameLen) / 2
-	TextShadowX := TextBaseX + (FontSize / 10)
-	TextShadowY := TextBaseY + (FontSize / 10)
+	frameWidth := (FontSize * txtLen) - (FontSize * 5)
+	TextShadowX := TextBaseX + (FontSize / 20)
+	TextShadowY := TextBaseY + (FontSize / 20)
 	canvasWidth := frameWidth + 100
 
 	fmt.Println(pallet.InvertColor)
-	rxy := 10
+	rxy := 12
 
 	// 下のtextは黒字で、上のテキストは色を付ける
 	svgPage = fmt.Sprintf(`
 	<svg width="%v" height="%v" xmlns="http://www.w3.org/2000/svg" 		xmlns:xlink="http://www.w3.org/1999/xlink"		>
-		<rect x="%v" y="%v" rx="%v" ry="%v" width="%v" 	height="%v" 			stroke="%v" 			fill="transparent" stroke-width="%v" 			/>
+		<rect x="%v" y="%v" rx="%v" ry="%v" width="%v" 	height="%v" stroke="%v" fill="transparent" stroke-width="%v" />
 		<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:%v;font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
 		%v
 		</text>
@@ -102,7 +106,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     	</text>
 	</svg>
 	`, canvasWidth, canvasHeight,
-		FrameXY, FrameXY, rxy, rxy, frameWidth, FrameHeight, pallet.BaseColor, 2,
+		FrameXY, FrameXY, rxy, rxy, frameWidth, FrameHeight, pallet.BaseColor, 10,
 		TextShadowX, TextShadowY, FontSize, pallet.InvertColor,
 		ai.Text,
 		TextBaseX, TextBaseY, FontSize, ai.Text)
@@ -113,6 +117,19 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Vary", "Accept-Encoding")
 
 	fmt.Fprint(w, svgPage)
+}
+
+func CountInString(str string) int {
+	length := 0
+	var it norm.Iter
+	it.InitString(norm.NFC, str)
+
+	for !it.Done() {
+		length++
+		it.Next()
+	}
+
+	return length
 }
 
 // getColorPallet is 補色や反対色を取得するメソッド
@@ -155,6 +172,7 @@ func getColorPallet(c string) ColorInfo {
 func searchBirthDay(base string, itemTxt string) AgeInfo {
 	var info AgeInfo
 	eto := []string{"子・ねずみ", "丑・うし", "寅・とら", "卯・うさぎ", "辰・たつ", "巳・へび", "午・うま", "未・ひつじ", "申・さる", "酉・とり", "戌・いぬ", "亥・いのしし"}
+	etoColor := []string{"#edbc5f", "#f8bac1", "#8ac1d4", "#3d9bcf", "#3c895d", "#936791", "#e76739", "#fdfbfe", "#b3d07e", "#c88f4e", "#e3d1b0", "#90664e"}
 
 	// 9FA0A0
 	// 辰、B9C998
@@ -182,6 +200,7 @@ func searchBirthDay(base string, itemTxt string) AgeInfo {
 	info.TotalDate = days
 	info.Age = days / 365
 	info.SexagenaryCycle = eto[(year-4)%12]
+	info.SexagenaryCycleColor = etoColor[(year-4)%12]
 
 	txtMain := fmt.Sprintf(itemTxt, info.BaseDate, info.Age, info.TotalDate, info.SexagenaryCycle)
 	info.Text = txtMain
