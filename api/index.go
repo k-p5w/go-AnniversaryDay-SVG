@@ -169,6 +169,7 @@ func getColorPallet(c string) ColorInfo {
 	return cp
 }
 
+// searchBirthDay is yyyymmddから表示用のテキストに加工する
 func searchBirthDay(base string, itemTxt string) AgeInfo {
 	var info AgeInfo
 	eto := []string{"子・ねずみ", "丑・うし", "寅・とら", "卯・うさぎ", "辰・たつ", "巳・へび", "午・うま", "未・ひつじ", "申・さる", "酉・とり", "戌・いぬ", "亥・いのしし"}
@@ -180,14 +181,17 @@ func searchBirthDay(base string, itemTxt string) AgeInfo {
 	if yerr != nil {
 		fmt.Println(yerr)
 	}
-	month, merr := strconv.Atoi(base[5:6])
+	month, merr := strconv.Atoi(base[4:6])
 	if merr != nil {
 		fmt.Println(merr)
 	}
-	day, derr := strconv.Atoi(base[7:8])
+	// 19001230
+	// 01234567
+	day, derr := strconv.Atoi(base[6:8])
 	if derr != nil {
 		fmt.Println(derr)
 	}
+	fmt.Printf("%v:%v-%v-%v \n", base, year, month, day)
 	birthDate := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 	now := time.Now()
 

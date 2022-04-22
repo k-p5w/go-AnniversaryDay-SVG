@@ -14,6 +14,14 @@
 
 以下、URLを開くだけ
 
-http://localhost:9999/api?birthday=19810216.svg
+http://localhost:9999/api?birthday=19830506.svg
 http://localhost:9999/api?birthday=19720312.svg
 http://localhost:9999/api?anniversaryday=19050807.svg
+
+19830506
+
+## WEBアプリ版
+
+2002918
+https://go-anniversary-day-svg.vercel.app/api?birthday=19830506.svg
+https://go-anniversary-day-svg.vercel.app/api?anniversaryday=20020918.svg
