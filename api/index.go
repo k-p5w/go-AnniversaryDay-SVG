@@ -28,9 +28,12 @@ const (
 )
 
 type ColorInfo struct {
-	BaseColor          string
+	// 基準の色
+	BaseColor string
+	// 補色
 	ComplementaryColor string
-	InvertColor        string
+	// 反転色
+	InvertColor string
 }
 type RGB struct {
 	R, G, B float64
@@ -41,8 +44,21 @@ type AgeInfo struct {
 	TotalDate            int
 	BaseDate             string
 	Text                 string
+	MultiText1           string
+	MultiText2           string
+	MultiText3           string
 	SexagenaryCycle      string
 	SexagenaryCycleColor string
+}
+
+type CanvasInfo struct {
+	CanvasHeight   int
+	CanvasWidth    int
+	FrameWidth     int
+	FrameHeight    int
+	TextAreaHeight int
+	TextAreaUpY    int
+	FontSize       int
 }
 
 // Handler is /APIから呼ばれる
@@ -52,14 +68,36 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// getパラメータの解析
 	q := r.URL.Query()
+
+	agent := r.UserAgent()
+
+	drawMode := "normal"
+	if strings.Index(agent, "Windows") > 0 {
+		fmt.Println("Windows!")
+		drawMode = "wide"
+	} else {
+		if strings.Index(agent, "Macintosh") > 0 {
+			fmt.Println("Macintosh!")
+			drawMode = "wide"
+		} else {
+			fmt.Println("mobile!")
+
+		}
+
+	}
+
 	svgname := ""
-	itemTxt := ""
+	itemTxt1 := ""
+	itemTxt2 := ""
+	itemTxt3 := "【%v】\n"
 	svgname = q.Get("birthday")
 	if len(svgname) == 0 {
 		svgname = q.Get("anniversaryday")
-		itemTxt = "start:%v ⇒ %v周年（開始後%v日）【%v】\n"
+		itemTxt1 = "%v開始"
+		itemTxt2 = " %v周年（%v日目）"
 	} else {
-		itemTxt = " %v生まれ ⇒ %v歳（生後%v日）【%v】\n"
+		itemTxt1 = " %v生まれ"
+		itemTxt2 = "%v歳（生後%v日）"
 	}
 
 	svgPage := "<h1>エラーが発生しました.</h1>"
@@ -78,7 +116,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	BaseColor := "#5AA572"
 
-	ai := searchBirthDay(yyyymmdd, itemTxt)
+	// テキストを加工する
+	ai := searchBirthDay(yyyymmdd, itemTxt1, itemTxt2, itemTxt3)
 	BaseColor = ai.SexagenaryCycleColor
 	pallet := getColorPallet(BaseColor)
 	// フォントサイズの導出
@@ -111,12 +150,51 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		ai.Text,
 		TextBaseX, TextBaseY, FontSize, ai.Text)
 
+	var cnvs CanvasInfo
+	cnvs.CanvasHeight = canvasHeight + FontSize
+	cnvs.TextAreaHeight = TextBaseY + FontSize
+	cnvs.FrameHeight = FrameHeight + FontSize
+	cnvs.FrameWidth = frameWidth / 2
+	cnvs.TextAreaUpY = TextShadowY * 2
+	cnvs.CanvasHeight = 600
+	cnvs.TextAreaHeight = 350
+	cnvs.FrameHeight = 400
+	cnvs.FrameWidth = 550
+	cnvs.FontSize = FontSize * 2
+	fmt.Println(cnvs)
+	svgPageUniversal := fmt.Sprintf(`
+		<svg class="square" viewbox="0 0 100 100"  xmlns="http://www.w3.org/2000/svg" 		xmlns:xlink="http://www.w3.org/1999/xlink"		>
+			
+			<circle cx="5" cy="5" r="500" fill="%v" />
+			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:RGB(2,2,2);font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
+			%v
+			</text>
+			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:%v;font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
+			%v
+			</text>			
+			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:RGB(2,2,2);font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;">
+			%v
+			</text>
+		</svg>
+		`, pallet.BaseColor,
+		TextShadowX, cnvs.TextAreaUpY, cnvs.FontSize, ai.MultiText1,
+		TextShadowX, cnvs.TextAreaUpY+cnvs.FontSize, cnvs.FontSize, pallet.InvertColor, ai.MultiText3,
+		TextBaseX, cnvs.TextAreaHeight, cnvs.FontSize, ai.MultiText2)
+
 	// Content-Type: image/svg+xml
 	// Vary: Accept-Encoding
 	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
 	w.Header().Set("Vary", "Accept-Encoding")
 
-	fmt.Fprint(w, svgPage)
+	// 描画を2種類（mobile向けと横長）を用意した
+
+	// パラメータによって切り替える
+	if drawMode == "wide" {
+		fmt.Fprint(w, svgPage)
+	} else {
+		fmt.Fprint(w, svgPageUniversal)
+	}
+
 }
 
 func CountInString(str string) int {
@@ -170,7 +248,7 @@ func getColorPallet(c string) ColorInfo {
 }
 
 // searchBirthDay is yyyymmddから表示用のテキストに加工する
-func searchBirthDay(base string, itemTxt string) AgeInfo {
+func searchBirthDay(base string, itemTxt1 string, itemTxt2 string, itemTxt3 string) AgeInfo {
 	var info AgeInfo
 	eto := []string{"子・ねずみ", "丑・うし", "寅・とら", "卯・うさぎ", "辰・たつ", "巳・へび", "午・うま", "未・ひつじ", "申・さる", "酉・とり", "戌・いぬ", "亥・いのしし"}
 	etoColor := []string{"#edbc5f", "#f8bac1", "#8ac1d4", "#3d9bcf", "#3c895d", "#936791", "#e76739", "#fdfbfe", "#b3d07e", "#c88f4e", "#e3d1b0", "#90664e"}
@@ -206,6 +284,10 @@ func searchBirthDay(base string, itemTxt string) AgeInfo {
 	info.SexagenaryCycle = eto[(year-4)%12]
 	info.SexagenaryCycleColor = etoColor[(year-4)%12]
 
+	info.MultiText1 = fmt.Sprintf(itemTxt1, info.BaseDate)
+	info.MultiText2 = fmt.Sprintf(itemTxt2, info.Age, info.TotalDate)
+	info.MultiText3 = fmt.Sprintf(itemTxt3, info.SexagenaryCycle)
+	itemTxt := itemTxt1 + " => " + itemTxt2 + ":" + itemTxt3
 	txtMain := fmt.Sprintf(itemTxt, info.BaseDate, info.Age, info.TotalDate, info.SexagenaryCycle)
 	info.Text = txtMain
 
