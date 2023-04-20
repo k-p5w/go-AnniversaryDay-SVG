@@ -197,7 +197,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	pallet.BackgroundColor = svgBGcolor
 	// cardサイズが285pxだったのでそれに最適化させよ
 	svgPageUniversal := fmt.Sprintf(`
-		<svg class="square" viewbox="0 0 100 100" width="260px" height="100px"  xmlns="http://www.w3.org/2000/svg" 		xmlns:xlink="http://www.w3.org/1999/xlink"		>
+		<svg class="square" viewbox="0 0 100 100" width="270px" height="100px"  xmlns="http://www.w3.org/2000/svg" 		xmlns:xlink="http://www.w3.org/1999/xlink"		>
 		    <path d="M0 0 L 640 0 L 640 320 L 0 320" style="fill:%v;stroke-width:0" />
 			<circle cx="5" cy="5" r="40" fill="%v" />
 			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:RGB(2,2,2);font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
