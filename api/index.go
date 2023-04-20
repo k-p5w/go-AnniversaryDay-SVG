@@ -320,6 +320,12 @@ func searchBirthDay(base string, itemTxt1 string, itemTxt2 string, itemTxt3 stri
 	info.BaseDate = birthDate.Format(layoutYMD)
 	info.TotalDate = days
 	info.Age = days / 365
+
+	// 3才以上は生誕にしよ
+	if info.Age > 3 {
+		itemTxt2 = "%v歳(生誕%v日)"
+	}
+
 	info.SexagenaryCycle = eto[(year-4)%12]
 	info.SexagenaryCycleColor = etoColor[(year-4)%12]
 
