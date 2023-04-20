@@ -1,5 +1,5 @@
 module github.com/k-p5w/go-AnniversaryDay-SVG
 
-go 1.17
+go 1.18
 
-require golang.org/x/text v0.3.7 // indirect
+require golang.org/x/text v0.9.0

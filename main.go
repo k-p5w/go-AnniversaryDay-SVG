@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -13,8 +12,8 @@ func main() {
 	if port == "" {
 		port = "9999"
 	}
-	fmt.Println("main start.")
 	http.HandleFunc("/", anniversary.Handler)
 	http.ListenAndServe(":"+port, nil)
-	fmt.Println("main end.")
+	// debugのときはこれでファイアウォールの設定がでなくなるらしい
+	// http.ListenAndServe("localhost:"+port, nil)
 }
