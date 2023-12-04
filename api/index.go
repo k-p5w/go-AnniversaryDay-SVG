@@ -88,6 +88,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		svgBGcolor = fmt.Sprintf("#%v", qColor)
 	}
 
+	textColor := getFontColor(svgBGcolor)
 	drawMode := "normal"
 	if len(svgType) == 0 {
 
@@ -200,20 +201,23 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		<svg class="square" viewbox="0 0 100 100" width="270px" height="100px"  xmlns="http://www.w3.org/2000/svg" 		xmlns:xlink="http://www.w3.org/1999/xlink"		>
 		    <path d="M0 0 L 640 0 L 640 320 L 0 320" style="fill:%v;stroke-width:0" />
 			<circle cx="5" cy="5" r="40" fill="%v" />
-			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:RGB(2,2,2);font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
+			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:%v;font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
 			%v
 			</text>
 			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:%v;font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;"			>			
 			%v
 			</text>			
-			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:RGB(2,2,2);font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;">
+			<text x="%v" y="%v" style="text-anchor:start;font-size:%vpx;fill:%v;font-family: Meiryo,  Verdana, Helvetica, Arial, sans-serif;">
 			%v
 			</text>
 		</svg>
 		`, pallet.BackgroundColor, pallet.BaseColor,
-		TextShadowX, cnvs.TextAreaUpY, cnvs.FontSize, ai.MultiText1,
-		TextShadowX, cnvs.TextAreaUpY+cnvs.FontSize, cnvs.FontSize, pallet.InvertColor, ai.MultiText2,
-		TextShadowX+5, cnvs.TextAreaUpY+(cnvs.FontSize*2), cnvs.FontSize, ai.MultiText3)
+		TextShadowX, cnvs.TextAreaUpY, cnvs.FontSize, textColor,
+		ai.MultiText1,
+		TextShadowX, cnvs.TextAreaUpY+cnvs.FontSize, cnvs.FontSize, pallet.InvertColor,
+		ai.MultiText2,
+		TextShadowX+5, cnvs.TextAreaUpY+(cnvs.FontSize*2), cnvs.FontSize, textColor,
+		ai.MultiText3)
 
 	// Content-Type: image/svg+xml
 	// Vary: Accept-Encoding
@@ -279,6 +283,158 @@ func getColorPallet(c string) ColorInfo {
 	cp.ComplementaryColor = fmt.Sprintf("RGB(%v,%v,%v)", newR, newG, newB)
 	cp.InvertColor = fmt.Sprintf("RGB(%v,%v,%v)", newR2, newG2, newB2)
 	return cp
+}
+
+func getFontColor(colorCode string) string {
+	fmt.Println(getFontColorOrg(colorCode))
+
+	// 背景色のRGB値を取得
+	var red, green, blue int
+	fmt.Sscanf(colorCode, "#%x%x%x", &red, &green, &blue)
+
+	// カラーコードが3桁の場合、各色を2倍する
+	if len(colorCode) == 4 {
+		red *= 2
+		green *= 2
+		blue *= 2
+	}
+
+	// sRGB を RGB に変換し、背景色の相対輝度を求める
+	toRgbItem := func(item int) float64 {
+		i := float64(item) / 255
+		if i <= 0.03928 {
+			return i / 12.92
+		}
+		return math.Pow((i+0.055)/1.055, 2.4)
+	}
+
+	R := toRgbItem(red)
+	G := toRgbItem(green)
+	B := toRgbItem(blue)
+	Lbg := 0.2126*R + 0.7152*G + 0.0722*B
+
+	// 白と黒の相対輝度。定義からそれぞれ 1 と 0 になる。
+	Lw := 1.0
+	Lb := 0.0
+
+	// 白と背景色のコントラスト比、黒と背景色のコントラスト比を
+	// それぞれ求める。WCAG 2.1 の計算方法に変更。
+	Cw := (Lw + 0.05) / (Lbg + 0.05)
+	Cb := (Lbg + 0.05) / (Lb + 0.05)
+	if Lw > Lbg {
+		Cw = (Lw + 0.05 - 0.02) / (Lbg + 0.05 + 0.02)
+	}
+	if Lb < Lbg {
+		Cb = (Lbg + 0.05 + 0.02) / (Lb + 0.05 - 0.02)
+	}
+	fmt.Printf("colorCode:%v,Cw[%v],Cb[%v] org2new:%v \n", colorCode, Cw, Cb, getFontColorOrg(colorCode))
+
+	if Cw < Cb {
+
+		return "#000000" // 黒
+	} else {
+		return "#ffffff" // 白
+	}
+}
+
+func getFontColorOrg(colorCode string) string {
+
+	// 背景色のRGB値を取得
+	var red, green, blue int
+	fmt.Sscanf(colorCode, "#%x%x%x", &red, &green, &blue)
+
+	// カラーコードが3桁の場合、各色を2倍する
+	if len(colorCode) == 4 {
+		red *= 2
+		green *= 2
+		blue *= 2
+	}
+
+	// sRGB を RGB に変換し、背景色の相対輝度を求める
+	toRgbItem := func(item int) float64 {
+		i := float64(item) / 255
+		if i <= 0.03928 {
+			return i / 12.92
+		}
+		return math.Pow((i+0.055)/1.055, 2.4)
+	}
+
+	R := toRgbItem(red)
+	G := toRgbItem(green)
+	B := toRgbItem(blue)
+	Lbg := 0.2126*R + 0.7152*G + 0.0722*B
+
+	// 白と黒の相対輝度。定義からそれぞれ 1 と 0 になる。
+	Lw := 1.0
+	Lb := 0.0
+
+	// 白と背景色のコントラスト比、黒と背景色のコントラスト比を
+	// それぞれ求める。
+	Cw := (Lw + 0.05) / (Lbg + 0.05)
+	Cb := (Lbg + 0.05) / (Lb + 0.05)
+
+	textColor := chooseTextColor(colorCode)
+
+	fmt.Printf("colorCode:%v,Cw[%v],Cb[%v] newCode:%v \n", colorCode, Cw, Cb, textColor)
+	// コントラスト比が大きい方を文字色として返す。
+	if Cw < Cb {
+
+		return "#000000" // 黒
+	} else {
+		return "#ffffff" // 白
+	}
+}
+
+func calculateRelativeLuminance(colorCode string) float64 {
+	// カラーコードをRGBに変換
+	red, green, blue := hexToRGB(colorCode)
+
+	// sRGB を RGB に変換し、背景色の相対輝度を求める
+	toRgbItem := func(item int) float64 {
+		i := float64(item) / 255
+		if i <= 0.03928 {
+			return i / 12.92
+		}
+		return math.Pow((i+0.055)/1.055, 2.4)
+	}
+
+	R := toRgbItem(red)
+	G := toRgbItem(green)
+	B := toRgbItem(blue)
+	return 0.2126*R + 0.7152*G + 0.0722*B
+}
+
+func hexToRGB(colorCode string) (int, int, int) {
+	var r, g, b int
+	fmt.Sscanf(colorCode, "#%02x%02x%02x", &r, &g, &b)
+	// カラーコードが3桁の場合、各色を2倍する
+	if len(colorCode) == 4 {
+		r *= 2
+		g *= 2
+		b *= 2
+	}
+	return r, g, b
+}
+
+func chooseTextColor(colorCode string) string {
+	// 背景色の相対輝度を計算
+	Lbg := calculateRelativeLuminance(colorCode)
+
+	// 白と黒の相対輝度。定義からそれぞれ 1 と 0 になる。
+	Lw := 1.0
+	Lb := 0.0
+
+	// 白と背景色のコントラスト比、黒と背景色のコントラスト比を
+	// それぞれ求める。
+	Cw := (Lw + 0.05) / (Lbg + 0.05)
+	Cb := (Lbg + 0.05) / (Lb + 0.05)
+
+	// コントラスト比が大きい方を文字色として返す。
+	if Cw < Cb {
+		return "white"
+	} else {
+		return "black"
+	}
 }
 
 // searchBirthDay is yyyymmddから表示用のテキストに加工する
