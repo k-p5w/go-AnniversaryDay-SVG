@@ -29,7 +29,10 @@ http://localhost:9999/api?birthday=19830506&type=card.svg
 http://localhost:9999/api?birthday=19720312.svg
 http://localhost:9999/api?anniversaryday=19050807.svg
 
-19830506
+- 文字色と背景色の調整確認用
+
+http://localhost:9999/api?color=ECE038&type=card&birthday=19731108.svg
+http://localhost:9999/api?color=493759&type=card&birthday=19731108.svg
 
 ## WEBアプリ版
 

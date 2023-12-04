@@ -285,156 +285,105 @@ func getColorPallet(c string) ColorInfo {
 	return cp
 }
 
+// 背景色（6桁のカラーコード）から文字色を出す関数
+func textColorFromBackgroundColor(bgColor string) string {
+	// 背景色の赤・緑・青の成分を取り出す
+	// r, _ := strconv.ParseInt(bgColor[0:2], 16, 0)
+	// g, _ := strconv.ParseInt(bgColor[2:4], 16, 0)
+	// b, _ := strconv.ParseInt(bgColor[4:6], 16, 0)
+
+	purserRGB := func(bgColor string) (int, int, int) {
+		// 背景色のRGB値を取得
+		var red int
+		var green int
+		var blue int
+		// 16進数で読みだす
+		fmt.Printf("start input:%v \n", bgColor)
+		// これで16進数を取得できるはずなのにうまくいかない？
+		// fmt.Sscanf(bgColor, "%x%x%x", &red, &green, &blue)
+		// #FF9900のときはこれで取得できる
+
+		// カラーコードが3桁の場合、各色を2倍する
+		if len(bgColor) == 4 {
+			fmt.Sscanf(bgColor, "#%01x%01x%01x", &red, &green, &blue)
+			red *= 2
+			green *= 2
+			blue *= 2
+		} else {
+			fmt.Sscanf(bgColor, "#%02x%02x%02x", &red, &green, &blue)
+		}
+		fmt.Printf("[purserRGB:%v]R:%v G:%v B:%v \n", bgColor, red, green, blue)
+
+		return red, green, blue
+	}
+	r, g, b := purserRGB(bgColor)
+	// 背景色の相対輝度を計算する
+	bgLuminance := relativeLuminance(r, g, b)
+
+	// 文字色の候補を定義する
+	textColors := []string{"#000000", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF"}
+
+	// 文字色の候補ごとにコントラスト比を計算し、最も高いものを選ぶ
+	maxContrast := 0.0
+	bestTextColor := ""
+	for _, textColor := range textColors {
+		r, g, b := purserRGB(textColor)
+		textLuminance := relativeLuminance(r, g, b)
+		contrast := contrastRatio(bgLuminance, textLuminance)
+		fmt.Printf("bgColor:%v(%v) contrast:%v textColor:%v(%v) bestTextColor:%v\n", bgColor, bgLuminance, contrast, textColor, textLuminance, bestTextColor)
+		if contrast > maxContrast {
+			maxContrast = contrast
+			bestTextColor = textColor
+		}
+	}
+
+	// コントラスト比が4.5:1以上になるように文字色を決める
+	if maxContrast >= 4.5 {
+		fmt.Printf("%v:%v \n", maxContrast, bestTextColor)
+		return fmt.Sprintf("%s", bestTextColor)
+	} else {
+		return "#000000"
+	}
+}
+
+// 相対輝度を計算する関数
+func relativeLuminance(r, g, b int) float64 {
+	fmt.Printf("[relativeLuminance]R:%v G:%v B:%v \n", r, g, b)
+	var rs, gs, bs float64
+	if r <= 10 {
+		rs = float64(r) / 3294.0
+	} else {
+		rs = math.Pow(float64(r)/269.0+0.0513, 2.4)
+	}
+	if g <= 10 {
+		gs = float64(g) / 3294.0
+	} else {
+		gs = math.Pow(float64(g)/269.0+0.0513, 2.4)
+	}
+	if b <= 10 {
+		bs = float64(b) / 3294.0
+	} else {
+		bs = math.Pow(float64(b)/269.0+0.0513, 2.4)
+	}
+	// コントラスト比 = (明るい色の相対輝度 + 0.05) / (暗い色の相対輝度 + 0.05)
+	return 0.2126*rs + 0.7152*gs + 0.0722*bs
+}
+
+// コントラスト比を計算する関数
+func contrastRatio(l1, l2 float64) float64 {
+	if l1 > l2 {
+		return (l1 + 0.05) / (l2 + 0.05)
+	} else {
+		return (l2 + 0.05) / (l1 + 0.05)
+	}
+}
+
 func getFontColor(colorCode string) string {
-	fmt.Println(getFontColorOrg(colorCode))
+	// 背景色の明るさを計算
+	textColor := textColorFromBackgroundColor(colorCode)
 
-	// 背景色のRGB値を取得
-	var red, green, blue int
-	fmt.Sscanf(colorCode, "#%x%x%x", &red, &green, &blue)
+	return textColor
 
-	// カラーコードが3桁の場合、各色を2倍する
-	if len(colorCode) == 4 {
-		red *= 2
-		green *= 2
-		blue *= 2
-	}
-
-	// sRGB を RGB に変換し、背景色の相対輝度を求める
-	toRgbItem := func(item int) float64 {
-		i := float64(item) / 255
-		if i <= 0.03928 {
-			return i / 12.92
-		}
-		return math.Pow((i+0.055)/1.055, 2.4)
-	}
-
-	R := toRgbItem(red)
-	G := toRgbItem(green)
-	B := toRgbItem(blue)
-	Lbg := 0.2126*R + 0.7152*G + 0.0722*B
-
-	// 白と黒の相対輝度。定義からそれぞれ 1 と 0 になる。
-	Lw := 1.0
-	Lb := 0.0
-
-	// 白と背景色のコントラスト比、黒と背景色のコントラスト比を
-	// それぞれ求める。WCAG 2.1 の計算方法に変更。
-	Cw := (Lw + 0.05) / (Lbg + 0.05)
-	Cb := (Lbg + 0.05) / (Lb + 0.05)
-	if Lw > Lbg {
-		Cw = (Lw + 0.05 - 0.02) / (Lbg + 0.05 + 0.02)
-	}
-	if Lb < Lbg {
-		Cb = (Lbg + 0.05 + 0.02) / (Lb + 0.05 - 0.02)
-	}
-	fmt.Printf("colorCode:%v,Cw[%v],Cb[%v] org2new:%v \n", colorCode, Cw, Cb, getFontColorOrg(colorCode))
-
-	if Cw < Cb {
-
-		return "#000000" // 黒
-	} else {
-		return "#ffffff" // 白
-	}
-}
-
-func getFontColorOrg(colorCode string) string {
-
-	// 背景色のRGB値を取得
-	var red, green, blue int
-	fmt.Sscanf(colorCode, "#%x%x%x", &red, &green, &blue)
-
-	// カラーコードが3桁の場合、各色を2倍する
-	if len(colorCode) == 4 {
-		red *= 2
-		green *= 2
-		blue *= 2
-	}
-
-	// sRGB を RGB に変換し、背景色の相対輝度を求める
-	toRgbItem := func(item int) float64 {
-		i := float64(item) / 255
-		if i <= 0.03928 {
-			return i / 12.92
-		}
-		return math.Pow((i+0.055)/1.055, 2.4)
-	}
-
-	R := toRgbItem(red)
-	G := toRgbItem(green)
-	B := toRgbItem(blue)
-	Lbg := 0.2126*R + 0.7152*G + 0.0722*B
-
-	// 白と黒の相対輝度。定義からそれぞれ 1 と 0 になる。
-	Lw := 1.0
-	Lb := 0.0
-
-	// 白と背景色のコントラスト比、黒と背景色のコントラスト比を
-	// それぞれ求める。
-	Cw := (Lw + 0.05) / (Lbg + 0.05)
-	Cb := (Lbg + 0.05) / (Lb + 0.05)
-
-	textColor := chooseTextColor(colorCode)
-
-	fmt.Printf("colorCode:%v,Cw[%v],Cb[%v] newCode:%v \n", colorCode, Cw, Cb, textColor)
-	// コントラスト比が大きい方を文字色として返す。
-	if Cw < Cb {
-
-		return "#000000" // 黒
-	} else {
-		return "#ffffff" // 白
-	}
-}
-
-func calculateRelativeLuminance(colorCode string) float64 {
-	// カラーコードをRGBに変換
-	red, green, blue := hexToRGB(colorCode)
-
-	// sRGB を RGB に変換し、背景色の相対輝度を求める
-	toRgbItem := func(item int) float64 {
-		i := float64(item) / 255
-		if i <= 0.03928 {
-			return i / 12.92
-		}
-		return math.Pow((i+0.055)/1.055, 2.4)
-	}
-
-	R := toRgbItem(red)
-	G := toRgbItem(green)
-	B := toRgbItem(blue)
-	return 0.2126*R + 0.7152*G + 0.0722*B
-}
-
-func hexToRGB(colorCode string) (int, int, int) {
-	var r, g, b int
-	fmt.Sscanf(colorCode, "#%02x%02x%02x", &r, &g, &b)
-	// カラーコードが3桁の場合、各色を2倍する
-	if len(colorCode) == 4 {
-		r *= 2
-		g *= 2
-		b *= 2
-	}
-	return r, g, b
-}
-
-func chooseTextColor(colorCode string) string {
-	// 背景色の相対輝度を計算
-	Lbg := calculateRelativeLuminance(colorCode)
-
-	// 白と黒の相対輝度。定義からそれぞれ 1 と 0 になる。
-	Lw := 1.0
-	Lb := 0.0
-
-	// 白と背景色のコントラスト比、黒と背景色のコントラスト比を
-	// それぞれ求める。
-	Cw := (Lw + 0.05) / (Lbg + 0.05)
-	Cb := (Lbg + 0.05) / (Lb + 0.05)
-
-	// コントラスト比が大きい方を文字色として返す。
-	if Cw < Cb {
-		return "white"
-	} else {
-		return "black"
-	}
 }
 
 // searchBirthDay is yyyymmddから表示用のテキストに加工する
