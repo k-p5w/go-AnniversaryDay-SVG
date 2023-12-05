@@ -306,9 +306,10 @@ func textColorFromBackgroundColor(bgColor string) string {
 		// カラーコードが3桁の場合、各色を2倍する
 		if len(bgColor) == 4 {
 			fmt.Sscanf(bgColor, "#%01x%01x%01x", &red, &green, &blue)
-			red *= 2
-			green *= 2
-			blue *= 2
+			//
+			red = red * red
+			green = green * green
+			blue = blue * blue
 		} else {
 			fmt.Sscanf(bgColor, "#%02x%02x%02x", &red, &green, &blue)
 		}
