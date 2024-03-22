@@ -115,16 +115,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	itemTxt2 := ""
 	itemTxt3 := "【%v】\n"
 	// 誕生日or記念日モードの判定
-	svgname = q.Get("birthday")
-	if len(svgname) > 0 {
+	svgnameBirth := q.Get("birthday")
+	if len(svgnameBirth) > 0 {
 
 		itemTxt1 = " %v生まれ"
-		itemTxt2 = "%v歳(生後%v日)"
+		itemTxt2 = "%v歳[生後%v日]"
+		svgname = svgnameBirth
 	}
 	svgnameAniv := q.Get("anniversaryday")
 	if len(svgnameAniv) > 0 {
 		itemTxt1 = "%v開始"
-		itemTxt2 = " %v周年(%v日目)"
+		itemTxt2 = " %v周年[%v日目]"
 		svgname = svgnameAniv
 	}
 	svgPage := "<h1>エラーが発生しました.</h1>"
