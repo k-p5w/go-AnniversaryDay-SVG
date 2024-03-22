@@ -145,7 +145,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	BaseColor := "#5AA572"
 
 	// テキストを加工する
-	ai := searchBirthDay(yyyymmdd, itemTxt1, itemTxt2, itemTxt3, svgType)
+	ai := searchBirthDay(yyyymmdd, itemTxt1, itemTxt2, itemTxt3, svgType, svgnameBirth)
 	BaseColor = ai.SexagenaryCycleColor
 	pallet := getColorPallet(BaseColor)
 	// フォントサイズの導出
@@ -392,7 +392,7 @@ func getFontColor(colorCode string) string {
 }
 
 // searchBirthDay is yyyymmddから表示用のテキストに加工する
-func searchBirthDay(base string, itemTxt1 string, itemTxt2 string, itemTxt3 string, svgType string) AgeInfo {
+func searchBirthDay(base string, itemTxt1 string, itemTxt2 string, itemTxt3 string, svgType string, txtBirth string) AgeInfo {
 	var info AgeInfo
 	eto := []string{"子・ねずみ", "丑・うし", "寅・とら", "卯・うさぎ", "辰・たつ", "巳・へび", "午・うま", "未・ひつじ", "申・さる", "酉・とり", "戌・いぬ", "亥・いのしし"}
 
@@ -432,8 +432,8 @@ func searchBirthDay(base string, itemTxt1 string, itemTxt2 string, itemTxt3 stri
 	info.Age = days / 365
 
 	// 3才以上は生誕にしよ
-	if info.Age > 3 {
-		itemTxt2 = "%v歳(生誕%v日)"
+	if info.Age > 3 && len(txtBirth) > 0 {
+		itemTxt2 = "%v歳[生誕%v日]"
 	}
 
 	info.SexagenaryCycle = eto[(year-4)%12]
