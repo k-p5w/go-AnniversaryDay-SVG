@@ -125,6 +125,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if len(svgnameAniv) > 0 {
 		itemTxt1 = "%v開始"
 		itemTxt2 = " %v周年(%v日目)"
+		svgname = svgnameAniv
 	}
 	svgPage := "<h1>エラーが発生しました.</h1>"
 
