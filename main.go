@@ -13,7 +13,10 @@ func main() {
 		port = "9999"
 	}
 	http.HandleFunc("/", anniversary.Handler)
+
+	// APIとして公開モードで稼働させるとき
 	http.ListenAndServe(":"+port, nil)
-	// debugのときはこれでファイアウォールの設定がでなくなるらしい
+
+	// ローカルホストで動かすとき　// debugのときはこれでファイアウォールの設定がでなくなるらしい
 	// http.ListenAndServe("localhost:"+port, nil)
 }

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記念日/誕生日カウンター SVGプレビュー</title>
+    <!-- Tailwind CSS CDNを読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Interフォントを優先し、日本語フォントを併用 */
+        body {
+            font-family: 'Inter', 'Meiryo', 'Hiragino Kaku Gothic ProN', sans-serif;
+            min-height: 100vh;
+            background-color: #1f2937; /* Dark background */
+        }
+        /* カスタムアラート用のスタイル */
+        .alert-box {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .svg-container svg {
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4f46e5',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-gray-100 flex flex-col items-center p-4 sm:p-8">
+
+    <div id="alertContainer"></div>
+
+    <div class="w-full max-w-4xl bg-gray-800 p-6 rounded-xl shadow-2xl">
+        <h1 class="text-3xl font-extrabold mb-6 text-center text-primary">記念日/誕生日カウンター</h1>
+
+        <!-- プレビューエリア -->
+        <div class="mb-8 p-4 bg-gray-900 rounded-lg flex justify-center items-center min-h-[150px]">
+            <div id="svgPreview" class="svg-container w-full">
+                <p class="text-gray-500 text-center">生成ボタンを押すとSVGが表示されます。</p>
+            </div>
+        </div>
+
+        <!-- コントロールパネル -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- 左カラム: 基本設定 -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold border-b border-gray-700 pb-2 mb-4">基本設定</h2>
+                
+                <!-- 1. 日付入力 -->
+                <div>
+                    <label for="dateInput" class="block text-sm font-medium mb-1">日付 (誕生日/開始日)</label>
+                    <input type="date" id="dateInput" value="2000-01-01"
+                           class="w-full p-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-200 focus:ring-primary focus:border-primary">
+                </div>
+
+                <!-- 2. 種別選択 (Birthday/Anniversary) -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">種別</label>
+                    <div class="flex space-x-4 p-2 bg-gray-700 rounded-lg">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="typeSelect" value="birthday" checked
+                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
+                            <span class="ml-2">誕生日</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="typeSelect" value="anniversaryday"
+                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
+                            <span class="ml-2">記念日</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3. 表示名/ロゴ (Goコードで dispname に変更) -->
+                <div>
+                    <label for="dispNameInput" class="block text-sm font-medium mb-1">表示名 (dispname)</label>
+                    <input type="text" id="dispNameInput" placeholder="例: My App Name" value=""
+                           class="w-full p-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-200 focus:ring-primary focus:border-primary">
+                </div>
+            </div>
+
+            <!-- 右カラム: スタイル設定 -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold border-b border-gray-700 pb-2 mb-4">スタイル設定</h2>
+
+                <!-- 4. 背景色 -->
+                <div>
+                    <label for="colorInput" class="block text-sm font-medium mb-1">背景色 (color)</label>
+                    <input type="color" id="colorInput" value="#1f2937"
+                           class="w-full h-10 p-1 border border-gray-600 rounded-lg bg-gray-700">
+                </div>
+
+                <!-- 5. モード選択 (type) -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">レイアウトモード (type)</label>
+                    <div class="space-y-2 p-2 bg-gray-700 rounded-lg">
+                        <label class="inline-flex items-center w-full">
+                            <input type="radio" name="modeSelect" value="modern" checked
+                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
+                            <span class="ml-2">Modern (クリーンデザイン/干支表示はdispname依存)</span>
+                        </label>
+                        <label class="inline-flex items-center w-full">
+                            <input type="radio" name="modeSelect" value="simplecard"
+                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
+                            <span class="ml-2">Simple Card (絵文字と複数行のコンパクト版)</span>
+                        </label>
+                        <label class="inline-flex items-center w-full">
+                            <input type="radio" name="modeSelect" value="legacy"
+                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
+                            <span class="ml-2">Legacy (単一行のワイドフレーム)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ボタン -->
+        <div class="mt-8">
+            <button onclick="generateCard()"
+                    class="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-lg shadow-indigo-500/50 transform hover:scale-[1.01]">
+                SVG生成
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const svgPreview = document.getElementById('svgPreview');
+        const alertContainer = document.getElementById('alertContainer');
+
+        /**
+         * カスタムアラートメッセージを表示する (alert()の代わり)
+         */
+        function alertMessage(message, type = 'info') {
+            const id = 'alert-' + Date.now();
+            const colorClass = type === 'warning' ? 'bg-yellow-500' : 'bg-green-500';
+            const alertHtml = `
+                <div id="${id}" class="alert-box p-4 rounded-lg shadow-xl text-sm font-semibold ${colorClass} text-white opacity-0 transform translate-x-10">
+                    ${message}
+                </div>
+            `;
+            alertContainer.innerHTML = alertHtml;
+            
+            // フェードイン
+            setTimeout(() => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.classList.remove('opacity-0', 'translate-x-10');
+                    element.classList.add('opacity-100', 'translate-x-0');
+                }
+            }, 50);
+
+            // フェードアウト
+            setTimeout(() => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.classList.remove('opacity-100', 'translate-x-0');
+                    element.classList.add('opacity-0', 'translate-x-10');
+                    setTimeout(() => element.remove(), 300); // アニメーション後に削除
+                }
+            }, 3000);
+        }
+
+        /**
+         * SVGを生成してプレビューエリアに表示する
+         */
+        async function fetchSvg(url) {
+            svgPreview.innerHTML = '<p class="text-primary text-center animate-pulse">SVGを生成中...</p>';
+            
+            // 指数関数的バックオフ（指数関数的遅延）を実装
+            const maxRetries = 3;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        // Goコードの新しいエラーレスポンスを処理
+                        const errorText = response.status === 400 
+                            ? await response.text()
+                            : `HTTPエラー: ${response.status}`;
+                        throw new Error(errorText);
+                    }
+                    const svgText = await response.text();
+
+                    // SVGを直接挿入
+                    if (svgText.startsWith('<svg') || svgText.startsWith('<h1')) {
+                         svgPreview.innerHTML = svgText;
+                    } else {
+                        // エラーHTMLが返ってきた場合など
+                        svgPreview.innerHTML = `<p class="text-red-400 text-center">サーバーエラー: 無効なSVGデータです。</p>`;
+                    }
+                    return; // 成功したら終了
+
+                } catch (error) {
+                    // console.error(`Fetchエラー (試行 ${attempt + 1}/${maxRetries}):`, error);
+                    if (attempt < maxRetries - 1) {
+                        // 失敗した場合、指数関数的に遅延させてからリトライ
+                        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        // 最終試行が失敗
+                        svgPreview.innerHTML = `<p class="text-red-400 text-center">SVGの生成に失敗しました: ${error.message} (URL: ${url})</p>`;
+                        alertMessage('SVGの生成に失敗しました。詳細をコンソールで確認してください。', 'warning');
+                    }
+                }
+            }
+        }
+
+        /**
+         * カード生成のためのURLを構築し、fetchSvgを呼び出す
+         */
+        function generateCard() {
+            const dateInput = document.getElementById('dateInput').value;
+            const typeSelect = document.querySelector('input[name="typeSelect"]:checked').value;
+            const modeSelect = document.querySelector('input[name="modeSelect"]:checked').value;
+            const dispName = document.getElementById('dispNameInput').value;
+            const color = document.getElementById('colorInput').value.substring(1); // #を削除
+
+            if (!dateInput) {
+                alertMessage('日付を入力してください。', 'warning');
+                return;
+            }
+
+            const datePart = dateInput.replace(/-/g, ''); // YYYYMMDD
+            let url = '/api?';
+
+            // ★ 修正済み: .svgを付加するのを止め、日付文字列のみを渡す
+            if (typeSelect === 'birthday') {
+                url += `birthday=${datePart}`; 
+            } else {
+                url += `anniversaryday=${datePart}`;
+            }
+
+            url += `&type=${modeSelect}`;
+
+            if (color) {
+                // 3桁または6桁のカラーコードを使用
+                const colorValue = color.length === 3 || color.length === 6 ? color : '';
+                if (colorValue) {
+                    url += `&color=${colorValue}`;
+                }
+            }
+
+            if (dispName) {
+                url += `&dispname=${encodeURIComponent(dispName)}`;
+            }
+
+            // console.log("Generated URL:", url);
+            fetchSvg(url);
+        }
+
+        // 初期ロード時に一度生成を試みる
+        window.onload = () => {
+             // フォームの初期値からURLを生成し、SVGを取得
+             generateCard();
+        };
+
+    </script>
+</body>
+</html>
