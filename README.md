@@ -49,7 +49,7 @@ http://localhost:9999/api?color=222&anniversaryday=20010105.svg
 
 http://localhost:9999/api?color=ECE038&birthday=20010105.svg
 http://localhost:9999/api?color=222&birthday=20040105.svg
-http://localhost:9999/api?color=CCC&birthday=20040105.svg
+http://localhost:9999/api?dispname=abc&color=CCC&birthday=20040105.svg
 
 
 # シンプルカード

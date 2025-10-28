@@ -21,9 +21,11 @@
             z-index: 1000;
             transition: opacity 0.3s ease-in-out;
         }
-        .svg-container svg {
+        /* SVGプレビューのコンテナ: <img>タグを使用するため、調整 */
+        .svg-container img {
             max-width: 100%;
             height: auto;
+            border-radius: 0.75rem; /* rounded-xl と同じ */
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
         }
     </style>
@@ -37,6 +39,9 @@
                 }
             }
         }
+        
+        // 外部APIのベースURLを定義
+        const BASE_API_URL = "https://go-anniversary-day-svg.vercel.app/api";
     </script>
 </head>
 <body class="text-gray-100 flex flex-col items-center p-4 sm:p-8">
@@ -51,6 +56,13 @@
             <div id="svgPreview" class="svg-container w-full">
                 <p class="text-gray-500 text-center">生成ボタンを押すとSVGが表示されます。</p>
             </div>
+        </div>
+        
+        <!-- URL表示エリア (デバッグ用) -->
+        <div class="mb-6">
+            <label for="apiUrlDisplay" class="block text-sm font-medium mb-1">生成されたAPI URL (デバッグ用)</label>
+            <input type="text" id="apiUrlDisplay" readonly
+                   class="w-full p-2 text-xs border border-gray-600 rounded-lg bg-gray-700 text-gray-400 select-all">
         </div>
 
         <!-- コントロールパネル -->
@@ -102,28 +114,6 @@
                     <input type="color" id="colorInput" value="#1f2937"
                            class="w-full h-10 p-1 border border-gray-600 rounded-lg bg-gray-700">
                 </div>
-
-                <!-- 5. モード選択 (type) -->
-                <div>
-                    <label class="block text-sm font-medium mb-1">レイアウトモード (type)</label>
-                    <div class="space-y-2 p-2 bg-gray-700 rounded-lg">
-                        <label class="inline-flex items-center w-full">
-                            <input type="radio" name="modeSelect" value="modern" checked
-                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
-                            <span class="ml-2">Modern (クリーンデザイン/干支表示はdispname依存)</span>
-                        </label>
-                        <label class="inline-flex items-center w-full">
-                            <input type="radio" name="modeSelect" value="simplecard"
-                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
-                            <span class="ml-2">Simple Card (絵文字と複数行のコンパクト版)</span>
-                        </label>
-                        <label class="inline-flex items-center w-full">
-                            <input type="radio" name="modeSelect" value="legacy"
-                                   class="form-radio text-primary border-gray-600 bg-gray-800 focus:ring-primary">
-                            <span class="ml-2">Legacy (単一行のワイドフレーム)</span>
-                        </label>
-                    </div>
-                </div>
             </div>
         </div>
         
@@ -139,6 +129,7 @@
     <script>
         const svgPreview = document.getElementById('svgPreview');
         const alertContainer = document.getElementById('alertContainer');
+        const apiUrlDisplay = document.getElementById('apiUrlDisplay');
 
         /**
          * カスタムアラートメッセージを表示する (alert()の代わり)
@@ -174,56 +165,11 @@
         }
 
         /**
-         * SVGを生成してプレビューエリアに表示する
-         */
-        async function fetchSvg(url) {
-            svgPreview.innerHTML = '<p class="text-primary text-center animate-pulse">SVGを生成中...</p>';
-            
-            // 指数関数的バックオフ（指数関数的遅延）を実装
-            const maxRetries = 3;
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        // Goコードの新しいエラーレスポンスを処理
-                        const errorText = response.status === 400 
-                            ? await response.text()
-                            : `HTTPエラー: ${response.status}`;
-                        throw new Error(errorText);
-                    }
-                    const svgText = await response.text();
-
-                    // SVGを直接挿入
-                    if (svgText.startsWith('<svg') || svgText.startsWith('<h1')) {
-                         svgPreview.innerHTML = svgText;
-                    } else {
-                        // エラーHTMLが返ってきた場合など
-                        svgPreview.innerHTML = `<p class="text-red-400 text-center">サーバーエラー: 無効なSVGデータです。</p>`;
-                    }
-                    return; // 成功したら終了
-
-                } catch (error) {
-                    // console.error(`Fetchエラー (試行 ${attempt + 1}/${maxRetries}):`, error);
-                    if (attempt < maxRetries - 1) {
-                        // 失敗した場合、指数関数的に遅延させてからリトライ
-                        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        // 最終試行が失敗
-                        svgPreview.innerHTML = `<p class="text-red-400 text-center">SVGの生成に失敗しました: ${error.message} (URL: ${url})</p>`;
-                        alertMessage('SVGの生成に失敗しました。詳細をコンソールで確認してください。', 'warning');
-                    }
-                }
-            }
-        }
-
-        /**
-         * カード生成のためのURLを構築し、fetchSvgを呼び出す
+         * カード生成のためのURLを構築し、<img>タグに埋め込む
          */
         function generateCard() {
             const dateInput = document.getElementById('dateInput').value;
             const typeSelect = document.querySelector('input[name="typeSelect"]:checked').value;
-            const modeSelect = document.querySelector('input[name="modeSelect"]:checked').value;
             const dispName = document.getElementById('dispNameInput').value;
             const color = document.getElementById('colorInput').value.substring(1); // #を削除
 
@@ -233,36 +179,51 @@
             }
 
             const datePart = dateInput.replace(/-/g, ''); // YYYYMMDD
-            let url = '/api?';
+            
+            let params = [];
 
-            // ★ 修正済み: .svgを付加するのを止め、日付文字列のみを渡す
-            if (typeSelect === 'birthday') {
-                url += `birthday=${datePart}`; 
-            } else {
-                url += `anniversaryday=${datePart}`;
-            }
-
-            url += `&type=${modeSelect}`;
-
+            // 1. color (最優先で先頭に配置)
             if (color) {
-                // 3桁または6桁のカラーコードを使用
                 const colorValue = color.length === 3 || color.length === 6 ? color : '';
                 if (colorValue) {
-                    url += `&color=${colorValue}`;
+                    params.push(`color=${colorValue}`);
                 }
             }
 
+            // 2. dispname (日付の前に配置)
             if (dispName) {
-                url += `&dispname=${encodeURIComponent(dispName)}`;
+                params.push(`dispname=${encodeURIComponent(dispName)}`);
             }
 
-            // console.log("Generated URL:", url);
-            fetchSvg(url);
+            // 3. birthday / anniversaryday (最後に配置)
+            if (typeSelect === 'birthday') {
+                params.push(`birthday=${datePart}`); 
+            } else {
+                params.push(`anniversaryday=${datePart}`);
+            }
+            
+            // パラメーターを結合し、URLを構築
+            let url = BASE_API_URL + '?' + params.join('&');
+            
+            // 4. 最後に .svg を付加
+            url += '.svg';
+
+            // デバッグ用にURLを表示
+            apiUrlDisplay.value = url;
+            
+            svgPreview.innerHTML = `
+                <img src="${url}" 
+                     alt="記念日カウンターSVGカード" 
+                     class="rounded-xl mx-auto w-full max-w-sm" 
+                     onerror="this.onerror=null; this.alt='SVGの読み込みに失敗しました。APIエラーの可能性があります。'; this.style.opacity='0.5'; this.style.border='3px dashed red';"
+                />
+            `;
+            
+            alertMessage('SVG URLを img タグに設定しました。');
         }
 
         // 初期ロード時に一度生成を試みる
         window.onload = () => {
-             // フォームの初期値からURLを生成し、SVGを取得
              generateCard();
         };
 

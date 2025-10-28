@@ -135,7 +135,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// テキストを加工する (全てのモードに必要な情報を取得)
 	// useCardEmojiがtrueのとき絵文字 (Simple Card Mode)
-	useCardEmoji := isSimpleCardMode
+	// ★ Modern Modeでも絵文字のみにしたいので、isModernModeでもtrueにする
+	useCardEmoji := isSimpleCardMode || isModernMode
 
 	// ★ itemTxt2が searchBirthDay内で「生誕」に書き換えられる
 	ai := searchBirthDay(yyyymmdd, itemTxt1, itemTxt2, itemTxt3, useCardEmoji)
@@ -180,11 +181,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// 1. MODERN Style: type="", type=modern, type=card (①)
 	if isModernMode {
 
-		// appNameが空の場合は、干支の名称も非表示にする (クリーン化)
-		displayZodiac := ai.SexagenaryCycle // 名称のみ (例: "巳・へび")
-		if len(appName) == 0 {
-			displayZodiac = ""
-		}
+		// ai.SexagenaryCycle は、searchBirthDayで干支の絵文字になっている
 
 		svgPageModern := fmt.Sprintf(`
 <svg xmlns="http://www.w3.org/2000/svg" width="100%%" height="100%%" viewBox="0 0 400 120">
@@ -204,13 +201,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
         [%v%v日]
     </text>
     
-    <!-- 干支 (左上: 分離) - appNameがない場合は非表示 (displayZodiacが空になる) -->
-    <text x="30" y="45" text-anchor="start" font-size="18" fill="%v" font-weight="bold" font-family="Meiryo, sans-serif">
+    <!-- 干支 (左上: 絵文字のみを大きく表示) -->
+    <text x="30" y="50" text-anchor="start" font-size="30" fill="%v" font-weight="bold" font-family="Meiryo, sans-serif">
         %v
     </text>
 
     <!-- 誕生日/開始日の説明 (左中: 分離) -->
-    <text x="30" y="75" text-anchor="start" font-size="18" fill="%v" font-family="Meiryo, sans-serif">
+    <text x="30" y="80" text-anchor="start" font-size="18" fill="%v" font-family="Meiryo, sans-serif">
         %v
     </text>
 
@@ -229,8 +226,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			dynamicFontColor,       // 7. 日数文字色: 動的コントラストカラー
 			prefixText,             // 8. 接頭辞 ("生後" or "生誕" or "")
 			ai.TotalDate,           // 9. 日数
-			pallet.BaseColor,       // 10. 干支の文字色（アクセントカラー/干支色）
-			displayZodiac,          // 11. 干支の名称 **(appNameがない場合は空)**
+			pallet.BaseColor,       // 10. (使わないがプレースホルダに干支色を設定)
+			ai.SexagenaryCycle,     // 11. 干支の絵文字 **(常に絵文字)**
 			dynamicFontColor,       // 12. 日付の説明文字色: 動的コントラストカラー
 			ai.BaseDateDescription, // 13. ベースの日付の説明 (例: "2001年1月5日生まれ")
 			dynamicFontColor,       // 14. タイトル/ロゴ文字色: 動的コントラストカラー
@@ -363,10 +360,10 @@ func searchBirthDay(yyyymmdd string, itemTxt1 string, itemTxt2 string, itemTxt3 
 	// ai.SexagenaryCycle には、モードに応じて表示したいテキストを設定する
 	var displayZodiac string
 	if useCardEmoji {
-		// Simple Card Mode (絵文字のみ)
+		// Simple Card Mode & Modern Mode (絵文字のみ)
 		displayZodiac = zodiac.Emoji
 	} else {
-		// Modern/Legacy Mode (名称のみ)
+		// Legacy Mode (名称のみ) - (このロジックは使われなくなるが残しておく)
 		displayZodiac = zodiac.Name
 	}
 
@@ -376,7 +373,7 @@ func searchBirthDay(yyyymmdd string, itemTxt1 string, itemTxt2 string, itemTxt3 
 		TotalDate:            totalDate,
 		BaseDate:             t.Format(layoutYMD),
 		BaseDateDescription:  fmt.Sprintf(itemTxt1, t.Format(layoutYMD)),
-		SexagenaryCycle:      displayZodiac, // "巳・へび" または "🐍"
+		SexagenaryCycle:      displayZodiac, // "🐍" (絵文字)
 		SexagenaryCycleColor: color,
 	}
 
@@ -397,7 +394,7 @@ func searchBirthDay(yyyymmdd string, itemTxt1 string, itemTxt2 string, itemTxt3 
 	if useCardEmoji {
 		ai.MultiText1 = fmt.Sprintf("%v %v", zodiac.Emoji, ai.BaseDateDescription) // "🐍 2001年1月5日生まれ"
 	} else {
-		// Modern/Legacy Mode のテキスト処理 (既存のまま)
+		// Legacy Mode のテキスト処理 (既存のまま)
 		ai.MultiText1 = fmt.Sprintf(itemTxt3, ai.BaseDateDescription) // 【2001年1月5日生まれ】
 	}
 
